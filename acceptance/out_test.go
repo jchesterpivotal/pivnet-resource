@@ -9,11 +9,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -24,11 +19,6 @@ import (
 const (
 	executableTimeout = 60 * time.Second
 )
-
-type s3client struct {
-	client  *s3.S3
-	session *session.Session
-}
 
 var _ = Describe("Out", func() {
 	var (
@@ -142,183 +132,6 @@ var _ = Describe("Out", func() {
 		By("Removing local temp files")
 		err := os.RemoveAll(rootDir)
 		Expect(err).ShouldNot(HaveOccurred())
-	})
-
-	Describe("Argument validation", func() {
-		Context("when no root directory is provided via args", func() {
-			It("exits with error", func() {
-				command := exec.Command(outPath)
-				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(session.Err).Should(gbytes.Say("usage"))
-			})
-		})
-
-		Context("when no api_token is provided", func() {
-			BeforeEach(func() {
-				outRequest.Source.APIToken = ""
-
-				var err error
-				stdinContents, err = json.Marshal(outRequest)
-				Expect(err).ShouldNot(HaveOccurred())
-			})
-
-			It("exits with error", func() {
-				session := run(command, stdinContents)
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(session.Err).Should(gbytes.Say("api_token must be provided"))
-			})
-		})
-
-		Context("when no product_slug is provided", func() {
-			BeforeEach(func() {
-				outRequest.Source.ProductSlug = ""
-
-				var err error
-				stdinContents, err = json.Marshal(outRequest)
-				Expect(err).ShouldNot(HaveOccurred())
-			})
-
-			It("exits with error", func() {
-				session := run(command, stdinContents)
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(session.Err).Should(gbytes.Say("product_slug must be provided"))
-			})
-		})
-
-		Context("when S3 filepath prefix and glob are provided", func() {
-			BeforeEach(func() {
-				outRequest.Params.FilepathPrefix = "foo"
-				outRequest.Params.FileGlob = "*"
-
-				var err error
-				stdinContents, err = json.Marshal(outRequest)
-				Expect(err).ShouldNot(HaveOccurred())
-			})
-
-			Context("when no aws access key id is provided", func() {
-				BeforeEach(func() {
-					outRequest.Source.AccessKeyID = ""
-
-					var err error
-					stdinContents, err = json.Marshal(outRequest)
-					Expect(err).ShouldNot(HaveOccurred())
-				})
-
-				It("exits with error", func() {
-					session := run(command, stdinContents)
-
-					Eventually(session).Should(gexec.Exit(1))
-					Expect(session.Err).Should(gbytes.Say("access_key_id must be provided"))
-				})
-			})
-
-			Context("when no aws secret access key is provided", func() {
-				BeforeEach(func() {
-					outRequest.Source.SecretAccessKey = ""
-
-					var err error
-					stdinContents, err = json.Marshal(outRequest)
-					Expect(err).ShouldNot(HaveOccurred())
-				})
-
-				It("exits with error", func() {
-					session := run(command, stdinContents)
-
-					Eventually(session).Should(gexec.Exit(1))
-					Expect(session.Err).Should(gbytes.Say("secret_access_key must be provided"))
-				})
-			})
-		})
-
-		Context("when s3 filepath prefix is provided but not file glob", func() {
-			BeforeEach(func() {
-				outRequest.Params.FilepathPrefix = "foo"
-
-				var err error
-				stdinContents, err = json.Marshal(outRequest)
-				Expect(err).ShouldNot(HaveOccurred())
-			})
-
-			It("exits with error", func() {
-				session := run(command, stdinContents)
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(session.Err).Should(gbytes.Say("file glob must be provided"))
-			})
-		})
-
-		Context("when file glob is provided but not s3 filepath prefix", func() {
-			BeforeEach(func() {
-				outRequest.Params.FileGlob = "*"
-
-				var err error
-				stdinContents, err = json.Marshal(outRequest)
-				Expect(err).ShouldNot(HaveOccurred())
-			})
-
-			It("exits with error", func() {
-				session := run(command, stdinContents)
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(session.Err).Should(gbytes.Say("s3_filepath_prefix must be provided"))
-			})
-		})
-
-		Context("when no version_file is provided", func() {
-			BeforeEach(func() {
-				outRequest.Params.VersionFile = ""
-
-				var err error
-				stdinContents, err = json.Marshal(outRequest)
-				Expect(err).ShouldNot(HaveOccurred())
-			})
-
-			It("exits with error", func() {
-				session := run(command, stdinContents)
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(session.Err).Should(gbytes.Say("version_file must be provided"))
-			})
-		})
-
-		Context("when no release_type_file is provided", func() {
-			BeforeEach(func() {
-				outRequest.Params.ReleaseTypeFile = ""
-
-				var err error
-				stdinContents, err = json.Marshal(outRequest)
-				Expect(err).ShouldNot(HaveOccurred())
-			})
-
-			It("exits with error", func() {
-				session := run(command, stdinContents)
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(session.Err).Should(gbytes.Say("release_type_file must be provided"))
-			})
-		})
-
-		Context("when no eula_slug_file is provided", func() {
-			BeforeEach(func() {
-				outRequest.Params.EulaSlugFile = ""
-
-				var err error
-				stdinContents, err = json.Marshal(outRequest)
-				Expect(err).ShouldNot(HaveOccurred())
-			})
-
-			It("exits with error", func() {
-				session := run(command, stdinContents)
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(session.Err).Should(gbytes.Say("eula_slug_file must be provided"))
-			})
-		})
 	})
 
 	Describe("Creating a new release", func() {
@@ -449,71 +262,21 @@ var _ = Describe("Out", func() {
 			})
 		})
 	})
-})
 
-func NewS3Client(
-	accessKey string,
-	secretKey string,
-	regionName string,
-	endpoint string,
-) (*s3client, error) {
-	creds := credentials.NewStaticCredentials(accessKey, secretKey, "")
+	Context("when validation fails", func() {
+		BeforeEach(func() {
+			outRequest.Source.ProductSlug = ""
 
-	awsConfig := &aws.Config{
-		Region:           aws.String(regionName),
-		Credentials:      creds,
-		S3ForcePathStyle: aws.Bool(true),
-	}
+			var err error
+			stdinContents, err = json.Marshal(outRequest)
+			Expect(err).ShouldNot(HaveOccurred())
+		})
 
-	sess := session.New(awsConfig)
-	client := s3.New(sess, awsConfig)
+		It("exits with error", func() {
+			session := run(command, stdinContents)
 
-	return &s3client{
-		client:  client,
-		session: sess,
-	}, nil
-}
-
-func (client *s3client) DownloadFile(
-	bucketName string,
-	remotePath string,
-	localPath string,
-) error {
-	downloader := s3manager.NewDownloader(client.session)
-
-	localFile, err := os.Create(localPath)
-	if err != nil {
-		return err
-	}
-	defer localFile.Close()
-
-	getObject := &s3.GetObjectInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(remotePath),
-	}
-
-	_, err = downloader.Download(localFile, getObject)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (client *s3client) DeleteFile(bucketName string, remotePath string) error {
-	_, err := client.client.DeleteObject(&s3.DeleteObjectInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(remotePath),
+			Eventually(session).Should(gexec.Exit(1))
+			Expect(session.Err).Should(gbytes.Say("product_slug must be provided"))
+		})
 	})
-
-	return err
-}
-
-func stringInSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
-}
+})
