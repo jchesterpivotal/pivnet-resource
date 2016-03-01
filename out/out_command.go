@@ -52,46 +52,6 @@ func NewOutCommand(config OutCommandConfig) *OutCommand {
 }
 
 func (c *OutCommand) Run(input concourse.OutRequest) (concourse.OutResponse, error) {
-	if input.Source.APIToken == "" {
-		return concourse.OutResponse{}, fmt.Errorf("%s must be provided", "api_token")
-	}
-
-	if input.Source.ProductSlug == "" {
-		return concourse.OutResponse{}, fmt.Errorf("%s must be provided", "product_slug")
-	}
-
-	if input.Params.VersionFile == "" {
-		return concourse.OutResponse{}, fmt.Errorf("%s must be provided", "version_file")
-	}
-
-	if input.Params.ReleaseTypeFile == "" {
-		return concourse.OutResponse{}, fmt.Errorf("%s must be provided", "release_type_file")
-	}
-
-	if input.Params.EulaSlugFile == "" {
-		return concourse.OutResponse{}, fmt.Errorf("%s must be provided", "eula_slug_file")
-	}
-
-	skipUpload := input.Params.FileGlob == "" && input.Params.FilepathPrefix == ""
-
-	if !skipUpload {
-		if input.Source.AccessKeyID == "" {
-			return concourse.OutResponse{}, fmt.Errorf("%s must be provided", "access_key_id")
-		}
-
-		if input.Source.SecretAccessKey == "" {
-			return concourse.OutResponse{}, fmt.Errorf("%s must be provided", "secret_access_key")
-		}
-
-		if input.Params.FileGlob == "" {
-			return concourse.OutResponse{}, fmt.Errorf("%s must be provided", "file glob")
-		}
-
-		if input.Params.FilepathPrefix == "" {
-			return concourse.OutResponse{}, fmt.Errorf("%s must be provided", "s3_filepath_prefix")
-		}
-	}
-
 	c.logger.Debugf("Received input: %+v\n", input)
 
 	var endpoint string
@@ -128,7 +88,7 @@ func (c *OutCommand) Run(input concourse.OutRequest) (concourse.OutResponse, err
 		log.Fatalln(err)
 	}
 
-	if skipUpload {
+	if input.Params.FileGlob == "" && input.Params.FilepathPrefix == "" {
 		c.logger.Debugf("File glob and s3_filepath_prefix not provided - skipping upload to s3")
 	} else {
 		bucket := input.Source.Bucket
