@@ -22,6 +22,7 @@ var _ = Describe("Out", func() {
 		tempDir string
 
 		uploadFilesSourceDir string
+		productFileName0     string
 
 		server *ghttp.Server
 
@@ -147,7 +148,8 @@ echo "$@"`
 		err = os.Mkdir(uploadFilesSourceDir, os.ModePerm)
 		Expect(err).NotTo(HaveOccurred())
 
-		fileToUploadPath := filepath.Join(uploadFilesSourceDir, "file-to-upload")
+		productFileName0 = "some-file"
+		fileToUploadPath := filepath.Join(uploadFilesSourceDir, productFileName0)
 		err = ioutil.WriteFile(fileToUploadPath, []byte("some contents"), os.ModePerm)
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -482,6 +484,37 @@ exit 1`
 			Expect(err).To(HaveOccurred())
 
 			Expect(err.Error()).To(MatchRegexp(".*release already exists.*%s.*", version))
+		})
+	})
+
+	Context("when metadata file is provided", func() {
+		BeforeEach(func() {
+			metadataFile = "metadata"
+			metadataFilePath = filepath.Join(sourcesDir, metadataFile)
+		})
+
+		JustBeforeEach(func() {
+			err := ioutil.WriteFile(metadataFilePath, []byte(metadataFileContents), os.ModePerm)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		Context("when metadata file contains matching product file descriptions", func() {
+			BeforeEach(func() {
+				metadataFileContents = fmt.Sprintf(
+					`---
+           product_files:
+           - name: %s
+             description: |
+               some
+               multi-line
+               description`,
+					productFileName0,
+				)
+			})
+
+			XIt("creates product files with the matching description", func() {
+
+			})
 		})
 	})
 })
