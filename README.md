@@ -11,7 +11,7 @@ resource_types:
   type: docker-image
   source:
     repository: pivotalcf/pivnet-resource
-    tag: v0.6.3
+    tag: v0.9.0
 ```
 
 The docker image is `pivotalcf/pivnet-resource`; the images are available on
